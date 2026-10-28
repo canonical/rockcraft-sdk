@@ -1,0 +1,44 @@
+name: rockcraft
+adopt-info: rockcraft-snap
+summary: Rockcraft, a tool for building rocks (OCI images)
+description: |
+  This SDK provides Rockcraft for building rocks, Ubuntu-based OCI images.
+  The Rockcraft cache is persisted on the host to speed up builds across
+  workshop updates.
+license: GPL-3.0
+base: ubuntu@26.04
+platforms:
+  amd64:
+
+parts:
+  rockcraft-snap:
+    plugin: nil
+    build-packages:
+      - curl
+      - jq
+      - ca-certificates
+    override-pull: |
+      set -euo pipefail
+      curl -fsS -H 'Snap-Device-Series: 16' \
+        "https://api.snapcraft.io/v2/snaps/info/rockcraft?fields=version,revision&architecture=${CRAFT_ARCH_BUILD_FOR}" \
+        >store.json
+      jq -e --arg arch "$CRAFT_ARCH_BUILD_FOR" '
+        [.["channel-map"][] |
+          select(.channel.track == "latest" and .channel.risk == "stable"
+            and .channel.architecture == $arch)] |
+        if length != 1 then
+          error("expected exactly one latest/stable Rockcraft revision for " + $arch)
+        else .[0] end |
+        if (.version | type == "string" and length > 0)
+          and (.revision | type == "number" and . > 0 and . == floor) then
+          {version, revisions: {($arch): (.revision | tostring)}}
+        else error("invalid Rockcraft version or revision from Snap Store") end
+      ' store.json >rockcraft-snap.json
+      craftctl set version="$(jq -r .version rockcraft-snap.json)"
+    override-build: |
+      install -m644 rockcraft-snap.json "$CRAFT_PART_INSTALL/rockcraft-snap.json"
+
+plugs:
+  cache:
+    interface: mount
+    workshop-target: /home/workshop/.cache/rockcraft

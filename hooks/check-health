@@ -1,0 +1,17 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0-only
+# Copyright 2026 Canonical Ltd.
+
+set -euo pipefail
+
+EXPECTED=$(jq -er .version "$SDK/rockcraft-snap.json")
+
+if ! output=$(sudo -u workshop --login rockcraft version 2>&1); then
+  workshopctl set-health error "rockcraft failed: $output"
+  exit
+fi
+if [ "$output" != "rockcraft $EXPECTED" ]; then
+  workshopctl set-health error "expected rockcraft $EXPECTED, got: $output"
+  exit
+fi
+workshopctl set-health okay
