@@ -1,2 +1,5 @@
 # sdkcraft build artifacts
 *.sdk
+
+# rocks
+*.rock
