@@ -9,6 +9,7 @@ license: GPL-3.0
 base: ubuntu@26.04
 platforms:
   amd64:
+  arm64:
 
 parts:
   rockcraft-snap:
