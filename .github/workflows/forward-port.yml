@@ -1,9 +1,15 @@
 name: Forward-Port from Main
 
 on:
-  push:
-    branches:
-      - main
+  # push:
+  #   branches:
+  #     - main
+  workflow_dispatch:
+    inputs:
+      long-term-branches:
+        description: 'JSON array of version branches to forward-port main into, e.g. ["1.24","1.25","1.26"]'
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -14,4 +20,4 @@ jobs:
   forward-port:
     uses: canonical/sdkcraft-actions/.github/workflows/forward-port.yml@main
     with:
-      long-term-branches: ${{ vars.LONG_TERM_BRANCHES }}
+      long-term-branches: ${{ inputs.long-term-branches }}
