@@ -1,0 +1,5 @@
+name: test-rockcraft
+base: ${BASE}
+runtime: lxd-vm
+sdks:
+  - name: try-rockcraft

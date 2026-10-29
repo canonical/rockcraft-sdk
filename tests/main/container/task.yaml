@@ -1,0 +1,25 @@
+summary: Reject container workshops before installing Rockcraft
+
+prepare: |
+  envsubst '${BASE}' <workshop.yaml.in >workshop.yaml
+
+execute: |
+  if workshop launch --verbose >launch.log 2>&1; then
+    echo "Rockcraft unexpectedly launched in a container" >&2
+    exit 1
+  fi
+  MATCH 'The Rockcraft SDK requires runtime: lxd-vm' <launch.log
+  workshop changes
+  workshop tasks
+  if workshop info >info.log 2>&1; then
+    echo "Rejected workshop unexpectedly remains launched" >&2
+    exit 1
+  fi
+  MATCH 'workshop not launched' <info.log
+
+restore: |
+  workshop remove || true
+
+debug: |
+  cat launch.log
+  workshop tasks

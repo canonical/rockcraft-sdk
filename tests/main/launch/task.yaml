@@ -1,0 +1,35 @@
+summary: Launch a workshop with the rockcraft SDK and verify setup
+
+prepare: |
+  sudo snap set workshop workshop.experimental-vms=1
+  sudo snap restart workshop.workshopd
+  envsubst '${BASE}' <workshop.yaml.in >workshop.yaml
+  workshop launch
+  workshop changes
+  workshop tasks
+  workshop info | MATCH 'status:\s+ready'
+
+restore: |
+  workshop remove || true
+
+execute: |
+  workshop exec -- bash -euc '
+    metadata=/var/lib/workshop/sdk/rockcraft/rockcraft-snap.json
+    expected=$(jq -r .version "$metadata")
+    revision=$(jq -r --arg arch "$(dpkg --print-architecture)" ".revisions[\$arch]" "$metadata")
+    test "$(rockcraft version)" = "rockcraft $expected"
+    test "$(snap list rockcraft | awk "NR == 2 {print \$3}")" = "$revision"
+    lxc query /1.0/profiles/default | jq -e "any(.devices[]; .type == \"disk\" and .path == \"/\")"
+  '
+  workshop exec -- bash -lc 'snap list rockcraft' | MATCH 'held'
+  workshop exec -- bash -euc '
+    project=$(mktemp -d /tmp/rockcraft-smoke.XXXXXX)
+    cd "$project"
+    rockcraft init
+    rockcraft pack
+    test -n "$(find . -maxdepth 1 -name "*.rock" -print -quit)"
+  '
+  workshop info | MATCH 'status:\s+ready'
+
+debug: |
+  workshop tasks
