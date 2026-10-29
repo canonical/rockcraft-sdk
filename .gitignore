@@ -3,3 +3,6 @@
 
 # rocks
 *.rock
+
+# spread extras
+.spread-reuse.yaml
