@@ -12,6 +12,48 @@ concurrency:
 
 jobs:
   build:
-    uses: canonical/sdkcraft-actions/.github/workflows/build.yml@main
-    with:
-      run-tests: true
+  # comment this reusable job until 
+  #  uses: canonical/sdkcraft-actions/.github/workflows/build.yml@main
+  #  with:
+  #    run-tests: true
+    runs-on: [self-hosted, linux, jammy, x64, xlarge]
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install LXD
+        uses: canonical/setup-lxd@8c6a87bfb56aa48f3fb9b830baa18562d8bfd4ee # v1
+        with:
+          channel: 6/stable
+
+      - name: Install sdkcraft
+        uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 # v3.0.2
+        with:
+          max_attempts: 3
+          retry_wait_seconds: 60
+          timeout_minutes: 10
+          command: sudo snap install sdkcraft --edge --classic
+
+      - name: Pack SDK
+        uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 # v3.0.2
+        with:
+          max_attempts: 3
+          retry_wait_seconds: 60
+          timeout_minutes: 120
+          command: sdkcraft pack
+
+      - name: Run tests
+        run: |
+          if [ -f tests/spread.yaml ]; then
+            lxc profile device set default root size="$INPUT_TEST_DISK_SIZE"
+            sdkcraft --verbose test
+          else
+            echo "No tests/spread.yaml found – skipping."
+          fi
+        env:
+          INPUT_TEST_DISK_SIZE: 20GiB
+
+      - name: Upload SDK as GitHub Actions artifact
+        if: true #inputs.actions-upload-artifact
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: sdk
+          path: "*.sdk"
